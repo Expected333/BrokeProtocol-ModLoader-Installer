@@ -1,61 +1,61 @@
 # ModLoader Setup — BROKE PROTOCOL
 
-Installeur graphique (un seul `.exe` autonome) qui injecte le **ModLoader** et
-**Harmony** dans une installation de BROKE PROTOCOL.
+Graphical installer (single self-contained `.exe`) that injects **ModLoader**
+and **Harmony** into a BROKE PROTOCOL installation.
 
-## Ce que fait l'installeur
+## What the installer does
 
-1. **Détecte le jeu** automatiquement via Steam (registre Windows +
-   `libraryfolders.vdf`, donc même si le jeu est sur un autre disque). Bouton
-   *Parcourir…* en secours.
-2. **Modifie `BrokeProtocol_Data/ScriptingAssemblies.json`** : ajoute
-   `!_0Harmony.dll` et `ModLoader.dll` (type `16`) à la liste, sans toucher au
-   reste (résiste aux mises à jour du jeu).
-3. **Modifie `BrokeProtocol_Data/RuntimeInitializeOnLoads.json`** : enregistre le
-   point d'entrée `ModLoader.Core.Start`.
-4. **Copie `ModLoader.dll` et `!_0Harmony.dll`** dans `BrokeProtocol_Data/Managed`.
+1. **Detects the game** automatically via Steam (Windows registry +
+   `libraryfolders.vdf`, so it works even if the game lives on another drive).
+   A *Browse…* button is provided as a fallback.
+2. **Patches `BrokeProtocol_Data/ScriptingAssemblies.json`**: appends
+   `!_0Harmony.dll` and `ModLoader.dll` (type `16`) to the list without
+   touching anything else (resilient to game updates).
+3. **Patches `BrokeProtocol_Data/RuntimeInitializeOnLoads.json`**: registers
+   the entry point `ModLoader.Core.Start`.
+4. **Copies `ModLoader.dll` and `!_0Harmony.dll`** to `BrokeProtocol_Data/Managed`.
 
-Les deux DLL sont **embarquées dans le `.exe`** : aucun fichier externe requis
-pour distribuer l'installeur.
+Both DLLs are **embedded into the `.exe`**: no external file is required to
+distribute the installer.
 
-### Sécurité / robustesse
+### Safety / robustness
 
-- **Sauvegarde** : chaque JSON est copié en `*.modloader.bak` avant modification.
-- **Idempotent** : relancer l'installeur ne crée aucun doublon.
-- **Désinstallation** : un bouton restaure les `.bak` et supprime les DLL ajoutées.
-- **Élévation UAC** : l'installeur demande les droits administrateur au lancement
-  (nécessaire pour écrire dans `C:\Program Files (x86)\Steam\...`).
+- **Backup**: every JSON file is copied to `*.modloader.bak` before modification.
+- **Idempotent**: running the installer again creates no duplicates.
+- **Uninstall**: a button restores the `.bak` files and removes the added DLLs.
+- **UAC elevation**: the installer requests administrator rights at launch
+  (required to write into `C:\Program Files (x86)\Steam\...`).
 
-## Compiler
+## Build
 
 ```sh
 cargo build --release
 ```
 
-Le binaire est généré dans `target/release/ModLoaderSetup.exe`.
+The binary is produced at `target/release/ModLoaderSetup.exe`.
 
-À chaque build, `build.rs` recopie automatiquement les dernières DLL depuis
-`../ModLoader/ModLoader/bin/Debug` vers `assets/` avant de les embarquer. Si ce
-dossier n'existe pas (build sur une autre machine), les copies présentes dans
-`assets/` sont conservées.
+On every build, `build.rs` automatically refreshes the bundled DLLs from
+`../ModLoader/ModLoader/bin/Debug` into `assets/` before embedding them. If
+that folder does not exist (building on another machine), the existing copies
+in `assets/` are kept as-is.
 
-## Tester
+## Test
 
 ```sh
 cargo test
 ```
 
-- Tests unitaires (`src/`) : parsing du `.vdf` Steam, fusion JSON idempotente.
-- Test d'intégration (`tests/integration.rs`) : cycle complet install → réinstall
-  → désinstall sur un faux dossier de jeu temporaire.
+- Unit tests (`src/`): Steam `.vdf` parsing, idempotent JSON merging.
+- Integration test (`tests/integration.rs`): full install → reinstall → uninstall
+  cycle against a temporary fake game folder.
 
 ## Architecture
 
-| Fichier              | Rôle                                                        |
+| File                 | Role                                                        |
 | -------------------- | ----------------------------------------------------------- |
-| `src/main.rs`        | Interface graphique (egui/eframe).                          |
-| `src/lib.rs`         | Point d'entrée de la bibliothèque (logique testable).       |
-| `src/steam.rs`       | Détection du dossier du jeu via Steam.                      |
-| `src/installer.rs`   | Backup, fusion des JSON, copie des DLL, désinstallation.    |
-| `src/assets.rs`      | DLL embarquées (`include_bytes!`).                          |
-| `build.rs`           | Rafraîchit les DLL + embarque le manifest Windows (UAC/DPI).|
+| `src/main.rs`        | Graphical interface (egui/eframe).                          |
+| `src/lib.rs`         | Library entry point (testable logic).                       |
+| `src/steam.rs`       | Game folder detection via Steam.                            |
+| `src/installer.rs`   | Backup, JSON merge, DLL copy, uninstall.                    |
+| `src/assets.rs`      | Embedded DLLs (`include_bytes!`).                           |
+| `build.rs`           | Refresh DLLs + embed Windows manifest (UAC/DPI).            |
