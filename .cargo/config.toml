@@ -1,0 +1,5 @@
+# Lie le runtime C (CRT) statiquement dans le binaire : plus aucune dépendance
+# à VCRUNTIME140.dll / msvcp140.dll. L'exe tourne sur un Windows "nu", sans avoir
+# besoin du Visual C++ Redistributable installé.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]
