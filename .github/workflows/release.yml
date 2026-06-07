@@ -1,0 +1,53 @@
+name: Release installer
+
+# Build l'installeur sur un runner Windows et publie l'.exe en GitHub Release
+# a chaque fois qu'un tag de version (v1.0.0, v1.2.3, ...) est pousse.
+#
+# Usage cote dev :
+#   git tag v1.0.1
+#   git push origin v1.0.1
+# -> la release "v1.0.1" apparait avec ModLoaderSetup.exe attache.
+#
+# L'.exe embarque assets/ModLoader.dll et assets/!_0Harmony.dll via include_bytes!,
+# donc le runner n'a besoin que du repo (aucune dependance externe).
+
+on:
+  push:
+    tags:
+      - 'v*'
+  # Permet aussi un declenchement manuel depuis l'onglet Actions (build de test,
+  # sans creer de release).
+  workflow_dispatch:
+
+permissions:
+  contents: write  # necessaire pour creer la release et y attacher l'.exe
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build release
+        run: cargo build --release
+
+      - name: Upload artifact (toujours, meme sans tag)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ModLoaderSetup
+          path: target/release/ModLoaderSetup.exe
+
+      - name: Publish GitHub Release
+        # Uniquement sur push de tag (pas sur workflow_dispatch manuel)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: target/release/ModLoaderSetup.exe
+          generate_release_notes: true

@@ -1,6 +1,6 @@
 [package]
 name = "modloadersetup"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2021"
 description = "Installeur du ModLoader pour BROKE PROTOCOL"
 authors = ["Yanis"]
